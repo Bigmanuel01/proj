@@ -25,18 +25,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 3️⃣ Push index.html via SSM
+      # 3️⃣ Deploy multi-line index.html via SSM
       - name: Deploy index.html to EC2 via SSM
         run: |
-          # Escape quotes in HTML
-          CONTENT=$(cat website/index.html | sed 's/"/\\"/g')
-
+          # Safely deploy multi-line HTML using here-document
           aws ssm send-command \
             --targets "Key=instanceIds,Values=${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy index.html" \
+            --comment "Deploy advanced index.html" \
             --parameters 'commands=[
               "mkdir -p /var/www/html",
-              "echo \"'"$CONTENT"'\" > /var/www/html/index.html",
+              "cat <<'\''EOF'\'' > /var/www/html/index.html
+'"$(cat website/index.html)"'
+EOF
+",
               "systemctl restart httpd"
             ]'
