@@ -39,3 +39,5 @@ jobs:
               "echo \"'"$CONTENT"'\" > /var/www/html/index.html",
               "systemctl restart httpd"
             ]'
+
+            
