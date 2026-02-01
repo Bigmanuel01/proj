@@ -27,17 +27,16 @@ jobs:
 
       # 3️⃣ Deploy multi-line index.html via SSM
       - name: Deploy index.html to EC2 via SSM
+        shell: bash
         run: |
-          # Safely deploy multi-line HTML using here-document
+          INSTANCE_ID="${{ secrets.EC2_INSTANCE_ID }}"
+          HTML_FILE="website/index.html"
+
+          # Base64 encode to safely handle multi-line HTML
+          HTML_B64=$(base64 -w0 "$HTML_FILE")
+
           aws ssm send-command \
-            --targets "Key=instanceIds,Values=${{ secrets.EC2_INSTANCE_ID }}" \
+            --targets "Key=instanceIds,Values=$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy advanced index.html" \
-            --parameters 'commands=[
-              "mkdir -p /var/www/html",
-              "cat <<'\''EOF'\'' > /var/www/html/index.html
-'"$(cat website/index.html)"'
-EOF
-",
-              "systemctl restart httpd"
-            ]'
+            --parameters commands="mkdir -p /var/www/html && echo $HTML_B64 | base64 --decode > /var/www/html/index.html && systemctl restart httpd"
