@@ -1,0 +1,41 @@
+name: Deploy Website to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "website/index.html"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 3️⃣ Push index.html via SSM
+      - name: Deploy index.html to EC2 via SSM
+        run: |
+          # Escape quotes in HTML
+          CONTENT=$(cat website/index.html | sed 's/"/\\"/g')
+
+          aws ssm send-command \
+            --targets "Key=instanceIds,Values=${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy index.html" \
+            --parameters 'commands=[
+              "mkdir -p /var/www/html",
+              "echo \"'"$CONTENT"'\" > /var/www/html/index.html",
+              "systemctl restart httpd"
+            ]'
